@@ -19,3 +19,13 @@ bun run dev
 
 Se `bun install` deixar pastas vazias em `node_modules` (comum em pastas sincronizadas pelo
 OneDrive), use `npm install` / `npm run <script>` como alternativa.
+
+## PWA
+
+O app é instalável (manifest + service worker registrados em `src/routes/__root.tsx`).
+O service worker (`public/sw.js`) só cacheia assets estáticos (js/css/imagens/fontes) —
+nunca navegação nem chamadas de dados, para o balanço nunca mostrar números velhos.
+
+Ícones em `public/` (icon-192, icon-512, icon-maskable-512, apple-touch-icon, favicon-32/48)
+são gerados a partir de um SVG vetorial com `bun run icons:generate` — edite
+`scripts/generate-icons.mjs` para mudar o desenho.

@@ -79,10 +79,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Nutrimilho · Balanço de Massa" },
-      { name: "description", content: "Controle operacional de silos, carregamentos e produção de germen com visões diária, semanal e mensal." },
+      {
+        name: "description",
+        content:
+          "Controle operacional de silos, carregamentos e produção de germen com visões diária, semanal e mensal.",
+      },
       { name: "author", content: "Nutrimilho" },
       { property: "og:title", content: "Nutrimilho · Balanço de Massa" },
-      { property: "og:description", content: "Controle operacional de silos, carregamentos e produção de germen com visões diária, semanal e mensal." },
+      {
+        property: "og:description",
+        content:
+          "Controle operacional de silos, carregamentos e produção de germen com visões diária, semanal e mensal.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

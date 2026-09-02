@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-const supabaseImport = () => import("@/integrations/supabase/client.server");
+const dbImport = () => import("@/lib/db.server");
 
 const numberLike = z.union([
   z.number(),
@@ -15,33 +15,34 @@ const numberLike = z.union([
 // Schemas
 const periodSchema = z.enum(["diario", "semanal", "mensal"]);
 
-const createCarregamentoSchema = z.object({
+const movimentoSchema = z.object({
   silo_id: z.string().uuid(),
   quantidade_kg: numberLike,
   data_hora: z.string().datetime().optional(),
   observacao: z.string().optional(),
 });
 
-const createProducaoSchema = z.object({
-  silo_id: z.string().uuid(),
-  quantidade_kg: numberLike,
-  data_hora: z.string().datetime().optional(),
-  observacao: z.string().optional(),
-});
+// Tipos de retorno (o driver do Neon não tipa as linhas automaticamente)
+type SiloRow = {
+  id: string;
+  nome: string;
+  capacidade_kg: number;
+  produto: string | null;
+  estoque_atual_kg: number;
+  created_at: string | null;
+};
 
-const createReprocessoSchema = z.object({
-  silo_id: z.string().uuid(),
-  quantidade_kg: numberLike,
-  data_hora: z.string().datetime().optional(),
-  observacao: z.string().optional(),
-});
+type MovimentoRow = {
+  id: string;
+  silo_id: string | null;
+  quantidade_kg: number;
+  data_hora: string;
+  observacao: string | null;
+  created_at: string | null;
+  silo_nome: string | null;
+};
 
-const createResiduoSchema = z.object({
-  silo_id: z.string().uuid(),
-  quantidade_kg: numberLike,
-  data_hora: z.string().datetime().optional(),
-  observacao: z.string().optional(),
-});
+type MovimentoInsertRow = Omit<MovimentoRow, "silo_nome">;
 
 // Helpers
 function startOfPeriod(period: z.infer<typeof periodSchema>) {
@@ -59,232 +60,180 @@ function startOfPeriod(period: z.infer<typeof periodSchema>) {
 
 // Server functions
 export const getSilos = createServerFn({ method: "GET" }).handler(async () => {
-  const { supabaseAdmin } = await supabaseImport();
-  const { data, error } = await supabaseAdmin.from("silos").select("*").order("nome");
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  const { sql } = await dbImport();
+  const rows = await sql`SELECT * FROM silos ORDER BY nome`;
+  return rows as SiloRow[];
 });
 
 export const getCarregamentos = createServerFn({ method: "GET" })
   .validator((data) => z.object({ periodo: periodSchema }).parse(data))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await supabaseImport();
+    const { sql } = await dbImport();
     const start = startOfPeriod(data.periodo).toISOString();
-    const { data: rows, error } = await supabaseAdmin
-      .from("carregamentos")
-      .select("*, silos(nome)")
-      .gte("data_hora", start)
-      .order("data_hora", { ascending: false });
-    if (error) throw new Error(error.message);
-    return rows ?? [];
+    const rows = await sql`
+      SELECT c.*, s.nome AS silo_nome
+      FROM carregamentos c
+      LEFT JOIN silos s ON s.id = c.silo_id
+      WHERE c.data_hora >= ${start}
+      ORDER BY c.data_hora DESC
+    `;
+    return rows as MovimentoRow[];
   });
 
 export const getProducoes = createServerFn({ method: "GET" })
   .validator((data) => z.object({ periodo: periodSchema }).parse(data))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await supabaseImport();
+    const { sql } = await dbImport();
     const start = startOfPeriod(data.periodo).toISOString();
-    const { data: rows, error } = await supabaseAdmin
-      .from("producoes")
-      .select("*, silos(nome)")
-      .gte("data_hora", start)
-      .order("data_hora", { ascending: false });
-    if (error) throw new Error(error.message);
-    return rows ?? [];
+    const rows = await sql`
+      SELECT p.*, s.nome AS silo_nome
+      FROM producoes p
+      LEFT JOIN silos s ON s.id = p.silo_id
+      WHERE p.data_hora >= ${start}
+      ORDER BY p.data_hora DESC
+    `;
+    return rows as MovimentoRow[];
   });
 
 export const getReprocessos = createServerFn({ method: "GET" })
   .validator((data) => z.object({ periodo: periodSchema }).parse(data))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await supabaseImport();
+    const { sql } = await dbImport();
     const start = startOfPeriod(data.periodo).toISOString();
-    const { data: rows, error } = await supabaseAdmin
-      .from("reprocessos")
-      .select("*, silos(nome)")
-      .gte("data_hora", start)
-      .order("data_hora", { ascending: false });
-    if (error) throw new Error(error.message);
-    return rows ?? [];
+    const rows = await sql`
+      SELECT r.*, s.nome AS silo_nome
+      FROM reprocessos r
+      LEFT JOIN silos s ON s.id = r.silo_id
+      WHERE r.data_hora >= ${start}
+      ORDER BY r.data_hora DESC
+    `;
+    return rows as MovimentoRow[];
   });
 
 export const getResiduos = createServerFn({ method: "GET" })
   .validator((data) => z.object({ periodo: periodSchema }).parse(data))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await supabaseImport();
+    const { sql } = await dbImport();
     const start = startOfPeriod(data.periodo).toISOString();
-    const { data: rows, error } = await supabaseAdmin
-      .from("residuos")
-      .select("*, silos(nome)")
-      .gte("data_hora", start)
-      .order("data_hora", { ascending: false });
-    if (error) throw new Error(error.message);
-    return rows ?? [];
+    const rows = await sql`
+      SELECT r.*, s.nome AS silo_nome
+      FROM residuos r
+      LEFT JOIN silos s ON s.id = r.silo_id
+      WHERE r.data_hora >= ${start}
+      ORDER BY r.data_hora DESC
+    `;
+    return rows as MovimentoRow[];
   });
 
 export const createCarregamento = createServerFn({ method: "POST" })
-  .validator((data) => createCarregamentoSchema.parse(data))
+  .validator((data) => movimentoSchema.parse(data))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await supabaseImport();
-    const payload = {
-      silo_id: data.silo_id,
-      quantidade_kg: data.quantidade_kg,
-      data_hora: data.data_hora ?? new Date().toISOString(),
-      observacao: data.observacao ?? null,
-    };
-    const { data: row, error } = await supabaseAdmin
-      .from("carregamentos")
-      .insert(payload)
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
+    const { sql } = await dbImport();
+    const dataHora = data.data_hora ?? new Date().toISOString();
+    const observacao = data.observacao ?? null;
 
-    // Atualiza estoque do silo
-    const { data: silo } = await supabaseAdmin
-      .from("silos")
-      .select("estoque_atual_kg")
-      .eq("id", data.silo_id)
-      .single();
-    if (silo) {
-      await supabaseAdmin
-        .from("silos")
-        .update({ estoque_atual_kg: Number(silo.estoque_atual_kg) + Number(data.quantidade_kg) })
-        .eq("id", data.silo_id);
-    }
+    const rows = (await sql`
+      INSERT INTO carregamentos (silo_id, quantidade_kg, data_hora, observacao)
+      VALUES (${data.silo_id}, ${data.quantidade_kg}, ${dataHora}, ${observacao})
+      RETURNING *
+    `) as [MovimentoInsertRow];
+    const row = rows[0];
+
+    // Carregamento entra no silo
+    await sql`
+      UPDATE silos SET estoque_atual_kg = estoque_atual_kg + ${data.quantidade_kg}
+      WHERE id = ${data.silo_id}
+    `;
 
     return row;
   });
 
 export const createProducao = createServerFn({ method: "POST" })
-  .validator((data) => createProducaoSchema.parse(data))
+  .validator((data) => movimentoSchema.parse(data))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await supabaseImport();
-    const payload = {
-      silo_id: data.silo_id,
-      quantidade_kg: data.quantidade_kg,
-      data_hora: data.data_hora ?? new Date().toISOString(),
-      observacao: data.observacao ?? null,
-    };
-    const { data: row, error } = await supabaseAdmin
-      .from("producoes")
-      .insert(payload)
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
+    const { sql } = await dbImport();
+    const dataHora = data.data_hora ?? new Date().toISOString();
+    const observacao = data.observacao ?? null;
 
-    // Atualiza estoque do silo
-    const { data: silo } = await supabaseAdmin
-      .from("silos")
-      .select("estoque_atual_kg")
-      .eq("id", data.silo_id)
-      .single();
-    if (silo) {
-      await supabaseAdmin
-        .from("silos")
-        .update({ estoque_atual_kg: Math.max(0, Number(silo.estoque_atual_kg) - Number(data.quantidade_kg)) })
-        .eq("id", data.silo_id);
-    }
+    const rows = (await sql`
+      INSERT INTO producoes (silo_id, quantidade_kg, data_hora, observacao)
+      VALUES (${data.silo_id}, ${data.quantidade_kg}, ${dataHora}, ${observacao})
+      RETURNING *
+    `) as [MovimentoInsertRow];
+    const row = rows[0];
+
+    // Produção de germen consome o silo
+    await sql`
+      UPDATE silos SET estoque_atual_kg = GREATEST(0, estoque_atual_kg - ${data.quantidade_kg})
+      WHERE id = ${data.silo_id}
+    `;
 
     return row;
   });
 
 export const createReprocesso = createServerFn({ method: "POST" })
-  .validator((data) => createReprocessoSchema.parse(data))
+  .validator((data) => movimentoSchema.parse(data))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await supabaseImport();
-    const payload = {
-      silo_id: data.silo_id,
-      quantidade_kg: data.quantidade_kg,
-      data_hora: data.data_hora ?? new Date().toISOString(),
-      observacao: data.observacao ?? null,
-    };
-    const { data: row, error } = await supabaseAdmin
-      .from("reprocessos")
-      .insert(payload)
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
+    const { sql } = await dbImport();
+    const dataHora = data.data_hora ?? new Date().toISOString();
+    const observacao = data.observacao ?? null;
+
+    const rows = (await sql`
+      INSERT INTO reprocessos (silo_id, quantidade_kg, data_hora, observacao)
+      VALUES (${data.silo_id}, ${data.quantidade_kg}, ${dataHora}, ${observacao})
+      RETURNING *
+    `) as [MovimentoInsertRow];
+    const row = rows[0];
 
     // Material reprocessado retorna ao estoque do silo
-    const { data: silo } = await supabaseAdmin
-      .from("silos")
-      .select("estoque_atual_kg")
-      .eq("id", data.silo_id)
-      .single();
-    if (silo) {
-      await supabaseAdmin
-        .from("silos")
-        .update({ estoque_atual_kg: Number(silo.estoque_atual_kg) + Number(data.quantidade_kg) })
-        .eq("id", data.silo_id);
-    }
+    await sql`
+      UPDATE silos SET estoque_atual_kg = estoque_atual_kg + ${data.quantidade_kg}
+      WHERE id = ${data.silo_id}
+    `;
 
     return row;
   });
 
 export const createResiduo = createServerFn({ method: "POST" })
-  .validator((data) => createResiduoSchema.parse(data))
+  .validator((data) => movimentoSchema.parse(data))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await supabaseImport();
-    const payload = {
-      silo_id: data.silo_id,
-      quantidade_kg: data.quantidade_kg,
-      data_hora: data.data_hora ?? new Date().toISOString(),
-      observacao: data.observacao ?? null,
-    };
-    // Resíduo sai do processo — não retorna e não é descontado do estoque do silo
-    const { data: row, error } = await supabaseAdmin
-      .from("residuos")
-      .insert(payload)
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
+    const { sql } = await dbImport();
+    const dataHora = data.data_hora ?? new Date().toISOString();
+    const observacao = data.observacao ?? null;
 
-    return row;
+    // Resíduo sai do processo — não retorna e não é descontado do estoque do silo
+    const rows = (await sql`
+      INSERT INTO residuos (silo_id, quantidade_kg, data_hora, observacao)
+      VALUES (${data.silo_id}, ${data.quantidade_kg}, ${dataHora}, ${observacao})
+      RETURNING *
+    `) as [MovimentoInsertRow];
+
+    return rows[0];
   });
 
 export const getResumo = createServerFn({ method: "GET" })
   .validator((data) => z.object({ periodo: periodSchema }).parse(data))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await supabaseImport();
+    const { sql } = await dbImport();
     const start = startOfPeriod(data.periodo).toISOString();
 
-    const [
-      { data: carregamentos },
-      { data: producoes },
-      { data: reprocessos },
-      { data: residuos },
-      { data: silos },
-    ] = await Promise.all([
-      supabaseAdmin.from("carregamentos").select("quantidade_kg, data_hora").gte("data_hora", start),
-      supabaseAdmin.from("producoes").select("quantidade_kg, data_hora").gte("data_hora", start),
-      supabaseAdmin.from("reprocessos").select("quantidade_kg, data_hora").gte("data_hora", start),
-      supabaseAdmin.from("residuos").select("quantidade_kg, data_hora").gte("data_hora", start),
-      supabaseAdmin.from("silos").select("estoque_atual_kg, capacidade_kg"),
-    ]);
+    type TotalRow = [{ total: string }];
+    type EstoqueRow = [{ estoque: string; capacidade: string }];
 
-    const totalCarregado = (carregamentos ?? []).reduce(
-      (sum: number, c: { quantidade_kg: number }) => sum + Number(c.quantidade_kg),
-      0,
-    );
-    const totalProduzido = (producoes ?? []).reduce(
-      (sum: number, p: { quantidade_kg: number }) => sum + Number(p.quantidade_kg),
-      0,
-    );
-    const totalReprocessado = (reprocessos ?? []).reduce(
-      (sum: number, r: { quantidade_kg: number }) => sum + Number(r.quantidade_kg),
-      0,
-    );
-    const totalResiduo = (residuos ?? []).reduce(
-      (sum: number, r: { quantidade_kg: number }) => sum + Number(r.quantidade_kg),
-      0,
-    );
-    const estoqueAtual = (silos ?? []).reduce(
-      (sum: number, s: { estoque_atual_kg: number }) => sum + Number(s.estoque_atual_kg),
-      0,
-    );
-    const capacidadeTotal = (silos ?? []).reduce(
-      (sum: number, s: { capacidade_kg: number }) => sum + Number(s.capacidade_kg),
-      0,
-    );
+    const [[carregado], [produzido], [reprocessado], [residuo], [estoque]] = (await Promise.all([
+      sql`SELECT COALESCE(SUM(quantidade_kg), 0) AS total FROM carregamentos WHERE data_hora >= ${start}`,
+      sql`SELECT COALESCE(SUM(quantidade_kg), 0) AS total FROM producoes WHERE data_hora >= ${start}`,
+      sql`SELECT COALESCE(SUM(quantidade_kg), 0) AS total FROM reprocessos WHERE data_hora >= ${start}`,
+      sql`SELECT COALESCE(SUM(quantidade_kg), 0) AS total FROM residuos WHERE data_hora >= ${start}`,
+      sql`SELECT COALESCE(SUM(estoque_atual_kg), 0) AS estoque, COALESCE(SUM(capacidade_kg), 0) AS capacidade FROM silos`,
+    ])) as [TotalRow, TotalRow, TotalRow, TotalRow, EstoqueRow];
+
+    const totalCarregado = Number(carregado.total);
+    const totalProduzido = Number(produzido.total);
+    const totalReprocessado = Number(reprocessado.total);
+    const totalResiduo = Number(residuo.total);
+    const estoqueAtual = Number(estoque.estoque);
+    const capacidadeTotal = Number(estoque.capacidade);
 
     return {
       totalCarregado,
@@ -293,7 +242,8 @@ export const getResumo = createServerFn({ method: "GET" })
       totalResiduo,
       estoqueAtual,
       capacidadeTotal,
-      percentualOcupacao: capacidadeTotal > 0 ? Math.round((estoqueAtual / capacidadeTotal) * 100) : 0,
+      percentualOcupacao:
+        capacidadeTotal > 0 ? Math.round((estoqueAtual / capacidadeTotal) * 100) : 0,
       balanco: totalCarregado - totalProduzido,
     };
   });

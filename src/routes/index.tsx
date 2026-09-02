@@ -4,7 +4,15 @@ import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Loader2, Plus, ArrowDownLeft, ArrowUpRight, Package, RefreshCw, Trash2 } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Package,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -45,12 +53,14 @@ export const Route = createFileRoute("/")({
       { title: "Nutrimilho · Balanço de Massa" },
       {
         name: "description",
-        content: "Controle operacional de silos, carregamentos e produção de germen com visões diária, semanal e mensal.",
+        content:
+          "Controle operacional de silos, carregamentos e produção de germen com visões diária, semanal e mensal.",
       },
       { property: "og:title", content: "Nutrimilho · Balanço de Massa" },
       {
         property: "og:description",
-        content: "Controle operacional de silos, carregamentos e produção de germen com visões diária, semanal e mensal.",
+        content:
+          "Controle operacional de silos, carregamentos e produção de germen com visões diária, semanal e mensal.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -147,7 +157,7 @@ function Index() {
     ...carregamentos.map((c) => ({
       id: c.id,
       tipo: "carregamento" as const,
-      nome: `Carregamento · ${(c.silos as { nome: string } | null)?.nome ?? "Silo"}`,
+      nome: `Carregamento · ${c.silo_nome ?? "Silo"}`,
       data: c.data_hora,
       quantidade: Number(c.quantidade_kg),
       observacao: c.observacao,
@@ -155,7 +165,7 @@ function Index() {
     ...producoes.map((p) => ({
       id: p.id,
       tipo: "producao" as const,
-      nome: `Produção germen · ${(p.silos as { nome: string } | null)?.nome ?? "Silo"}`,
+      nome: `Produção germen · ${p.silo_nome ?? "Silo"}`,
       data: p.data_hora,
       quantidade: Number(p.quantidade_kg),
       observacao: p.observacao,
@@ -163,7 +173,7 @@ function Index() {
     ...reprocessos.map((r) => ({
       id: r.id,
       tipo: "reprocesso" as const,
-      nome: `Reprocesso · ${(r.silos as { nome: string } | null)?.nome ?? "Silo"}`,
+      nome: `Reprocesso · ${r.silo_nome ?? "Silo"}`,
       data: r.data_hora,
       quantidade: Number(r.quantidade_kg),
       observacao: r.observacao,
@@ -171,7 +181,7 @@ function Index() {
     ...residuos.map((r) => ({
       id: r.id,
       tipo: "residuo" as const,
-      nome: `Resíduo · ${(r.silos as { nome: string } | null)?.nome ?? "Silo"}`,
+      nome: `Resíduo · ${r.silo_nome ?? "Silo"}`,
       data: r.data_hora,
       quantidade: Number(r.quantidade_kg),
       observacao: r.observacao,
@@ -199,7 +209,9 @@ function Index() {
             <p className="font-display text-xl leading-none font-extrabold text-sil">
               Balanço de Massa
             </p>
-            <p className="text-mut text-xs mt-1 tracking-wide">GERMEN, REPROCESSO & RESÍDUOS · PAINEL DE MASSA</p>
+            <p className="text-mut text-xs mt-1 tracking-wide">
+              GERMEN, REPROCESSO & RESÍDUOS · PAINEL DE MASSA
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -234,7 +246,9 @@ function Index() {
                 style={{ width: `${resumo?.percentualOcupacao ?? 0}%` }}
               />
             </div>
-            <p className="mt-2 text-xs text-mut">Capacidade {formatNumber(resumo?.capacidadeTotal ?? 0)} kg</p>
+            <p className="mt-2 text-xs text-mut">
+              Capacidade {formatNumber(resumo?.capacidadeTotal ?? 0)} kg
+            </p>
           </GlowCard>
 
           <GlowCard color="car">
@@ -309,7 +323,9 @@ function Index() {
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 rounded-2xl bg-panel border border-line p-5">
             <div className="flex items-center justify-between mb-4">
-              <p className="font-display text-lg font-bold">Movimento de massa · {labelPeriodo(periodo)}</p>
+              <p className="font-display text-lg font-bold">
+                Movimento de massa · {labelPeriodo(periodo)}
+              </p>
               <p className="text-xs text-mut font-mono">{format(new Date(), "dd·MM·yyyy")}</p>
             </div>
 
@@ -317,10 +333,18 @@ function Index() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-line hover:bg-transparent">
-                    <TableHead className="text-mut text-xs uppercase tracking-wider">Operação</TableHead>
-                    <TableHead className="text-mut text-xs uppercase tracking-wider text-right">Tipo</TableHead>
-                    <TableHead className="text-mut text-xs uppercase tracking-wider text-right">Quantidade</TableHead>
-                    <TableHead className="text-mut text-xs uppercase tracking-wider text-right">Horário</TableHead>
+                    <TableHead className="text-mut text-xs uppercase tracking-wider">
+                      Operação
+                    </TableHead>
+                    <TableHead className="text-mut text-xs uppercase tracking-wider text-right">
+                      Tipo
+                    </TableHead>
+                    <TableHead className="text-mut text-xs uppercase tracking-wider text-right">
+                      Quantidade
+                    </TableHead>
+                    <TableHead className="text-mut text-xs uppercase tracking-wider text-right">
+                      Horário
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -368,7 +392,9 @@ function Index() {
                 <div className="h-2.5 rounded-full bg-panel2 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-car transition-all duration-700"
-                    style={{ width: `${percentOf(resumo?.totalCarregado, resumo?.capacidadeTotal)}%` }}
+                    style={{
+                      width: `${percentOf(resumo?.totalCarregado, resumo?.capacidadeTotal)}%`,
+                    }}
                   />
                 </div>
               </div>
@@ -380,7 +406,9 @@ function Index() {
                 <div className="h-2.5 rounded-full bg-panel2 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-pro transition-all duration-700"
-                    style={{ width: `${percentOf(resumo?.totalProduzido, resumo?.capacidadeTotal)}%` }}
+                    style={{
+                      width: `${percentOf(resumo?.totalProduzido, resumo?.capacidadeTotal)}%`,
+                    }}
                   />
                 </div>
               </div>
@@ -423,7 +451,9 @@ function Index() {
             </div>
             <div className="mt-5 pt-4 border-t border-line rounded-xl bg-panel2 p-4 -mx-1">
               <p className="text-xs text-mut">Balanço líquido</p>
-              <p className={`font-mono text-2xl mt-1 ${(resumo?.balanco ?? 0) >= 0 ? "text-car" : "text-pro"}`}>
+              <p
+                className={`font-mono text-2xl mt-1 ${(resumo?.balanco ?? 0) >= 0 ? "text-car" : "text-pro"}`}
+              >
                 {(resumo?.balanco ?? 0) >= 0 ? "+" : ""}
                 {formatNumber(resumo?.balanco ?? 0)} kg
               </p>
@@ -438,7 +468,9 @@ function Index() {
             </div>
             <div>
               <p className="font-display text-lg font-bold">Lançamento rápido</p>
-              <p className="text-mut text-xs">Registre carregamento, produção, reprocesso ou resíduo</p>
+              <p className="text-mut text-xs">
+                Registre carregamento, produção, reprocesso ou resíduo
+              </p>
             </div>
           </div>
           <LancamentoForm silos={silos} onSuccess={refresh} />
@@ -480,16 +512,24 @@ function LancamentoForm({
 
       if (tipo === "carregamento") {
         await doCreateCarregamento({ data: payload });
-        toast.success("Carregamento registrado", { description: `${quantidade} kg adicionados ao silo.` });
+        toast.success("Carregamento registrado", {
+          description: `${quantidade} kg adicionados ao silo.`,
+        });
       } else if (tipo === "producao") {
         await doCreateProducao({ data: payload });
-        toast.success("Produção registrada", { description: `${quantidade} kg de germen produzidos.` });
+        toast.success("Produção registrada", {
+          description: `${quantidade} kg de germen produzidos.`,
+        });
       } else if (tipo === "reprocesso") {
         await doCreateReprocesso({ data: payload });
-        toast.success("Reprocesso registrado", { description: `${quantidade} kg retornaram ao silo para reprocesso.` });
+        toast.success("Reprocesso registrado", {
+          description: `${quantidade} kg retornaram ao silo para reprocesso.`,
+        });
       } else {
         await doCreateResiduo({ data: payload });
-        toast.success("Resíduo registrado", { description: `${quantidade} kg de resíduo descartados.` });
+        toast.success("Resíduo registrado", {
+          description: `${quantidade} kg de resíduo descartados.`,
+        });
       }
 
       setQuantidade("");
@@ -565,7 +605,9 @@ function LancamentoForm({
       </div>
 
       <div className="md:col-span-1">
-        <Label className="text-mut text-xs uppercase tracking-wider mb-2 block">Quantidade (kg)</Label>
+        <Label className="text-mut text-xs uppercase tracking-wider mb-2 block">
+          Quantidade (kg)
+        </Label>
         <Input
           type="number"
           min="0"
@@ -593,7 +635,11 @@ function LancamentoForm({
           disabled={isSubmitting || !siloId || !quantidade}
           className="w-full bg-sil text-ink hover:bg-sil/90 font-semibold disabled:opacity-50"
         >
-          {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <Package className="size-4" />}
+          {isSubmitting ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Package className="size-4" />
+          )}
           Lançar
         </Button>
       </div>
@@ -624,7 +670,10 @@ function GlowCard({
 }
 
 function formatNumber(n: number) {
-  return new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n);
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(n);
 }
 
 function percentOf(part?: number, total?: number) {

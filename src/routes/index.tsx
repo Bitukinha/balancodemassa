@@ -326,7 +326,9 @@ function Index() {
               <p className="font-display text-lg font-bold">
                 Movimento de massa · {labelPeriodo(periodo)}
               </p>
-              <p className="text-xs text-mut font-mono">{format(new Date(), "dd·MM·yyyy")}</p>
+              <p className="text-xs text-mut font-mono" suppressHydrationWarning>
+                {format(new Date(), "dd·MM·yyyy")}
+              </p>
             </div>
 
             <div className="overflow-x-auto">

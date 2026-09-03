@@ -26,6 +26,14 @@ O app é instalável (manifest + service worker registrados em `src/routes/__roo
 O service worker (`public/sw.js`) só cacheia assets estáticos (js/css/imagens/fontes) —
 nunca navegação nem chamadas de dados, para o balanço nunca mostrar números velhos.
 
-Ícones em `public/` (icon-192, icon-512, icon-maskable-512, apple-touch-icon, favicon-32/48)
-são gerados a partir de um SVG vetorial com `bun run icons:generate` — edite
-`scripts/generate-icons.mjs` para mudar o desenho.
+Ícones em `public/` (icon-192, icon-512, icon-maskable-512, apple-touch-icon, favicon-32/48,
+favicon.ico) e o logo do cabeçalho são gerados a partir de `scripts/assets/logo-nutrimilho.png`
+com `bun run icons:generate` — troque esse arquivo-fonte para mudar o desenho.
+
+## Deploy (Vercel)
+
+O build (`vite build`) usa Nitro; o preset do servidor é escolhido automaticamente em
+`vite.config.ts` — `vercel` quando a env `VERCEL` está setada (é o caso do build da própria
+Vercel), `node-server` em qualquer outro lugar. Não precisa de `vercel.json`: basta importar o
+repositório na Vercel, definir a env `DATABASE_URL` (connection string do Neon) nas configurações
+do projeto, e deixar o Build Command padrão (`npm run build` / `bun run build`).

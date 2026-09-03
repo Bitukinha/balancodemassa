@@ -37,7 +37,8 @@ export default defineConfig({
       // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
       server: { entry: "server" },
     }),
-    nitro({ preset: "node-server" }),
+    // Vercel's builds set VERCEL=1; everywhere else (self-hosted, local) targets a plain Node server.
+    nitro({ preset: process.env["VERCEL"] ? "vercel" : "node-server" }),
     viteReact(),
   ],
 });

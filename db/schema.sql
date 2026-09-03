@@ -55,9 +55,8 @@ CREATE INDEX IF NOT EXISTS residuos_data_hora_idx ON residuos (data_hora DESC);
 
 INSERT INTO silos (nome, capacidade_kg, produto, estoque_atual_kg)
 SELECT * FROM (VALUES
-  ('Silo 01', 4000, 'Milho', 3280),
-  ('Silo 02', 4000, 'Milho', 2560),
-  ('Silo 03', 4000, 'Soja', 1640),
-  ('Silo 04', 4000, 'Soja', 1000)
+  ('Silo 01', 40000, 'Germen', 0),
+  ('Silo 02', 16000, 'Germen', 0),
+  ('Silo 03', 16000, 'Germen', 0)
 ) AS seed(nome, capacidade_kg, produto, estoque_atual_kg)
 WHERE NOT EXISTS (SELECT 1 FROM silos);

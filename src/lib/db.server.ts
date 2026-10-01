@@ -11,11 +11,15 @@ function createSql() {
   return neon(DATABASE_URL);
 }
 
-let _sql: ReturnType<typeof createSql> | undefined;
+type Sql = ReturnType<typeof createSql>;
 
-export const sql: ReturnType<typeof createSql> = ((
-  ...args: Parameters<ReturnType<typeof createSql>>
-) => {
-  if (!_sql) _sql = createSql();
-  return _sql(...args);
-}) as ReturnType<typeof createSql>;
+let _sql: Sql | undefined;
+const getSql = () => (_sql ??= createSql());
+
+// Criado na primeira consulta; também expõe sql.query e sql.transaction
+export const sql: Sql = new Proxy(((...args: Parameters<Sql>) => getSql()(...args)) as Sql, {
+  get(_target, prop) {
+    const value = Reflect.get(getSql(), prop);
+    return typeof value === "function" ? value.bind(getSql()) : value;
+  },
+});

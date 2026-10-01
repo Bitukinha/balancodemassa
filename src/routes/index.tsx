@@ -104,8 +104,8 @@ const movimentoInfo: Record<
   TipoMovimento,
   { label: string; Icon: typeof ArrowDownLeft; sign: "+" | "−"; textClass: string }
 > = {
-  carregamento: { label: "Entrada", Icon: ArrowDownLeft, sign: "+", textClass: "text-car" },
-  producao: { label: "Saída", Icon: ArrowUpRight, sign: "−", textClass: "text-pro" },
+  carregamento: { label: "Saída", Icon: ArrowUpRight, sign: "−", textClass: "text-car" },
+  producao: { label: "Entrada", Icon: ArrowDownLeft, sign: "+", textClass: "text-pro" },
   reprocesso: { label: "Reprocesso", Icon: RefreshCw, sign: "+", textClass: "text-rep" },
   residuo: { label: "Resíduo", Icon: Trash2, sign: "−", textClass: "text-res" },
 };
@@ -251,22 +251,6 @@ function Index() {
             </p>
           </GlowCard>
 
-          <GlowCard color="car">
-            <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-[0.15em] text-car">Carregado</p>
-              <span className="size-2.5 rounded-full bg-car shadow-[0_0_10px_#f0a911]" />
-            </div>
-            <p className="font-mono text-4xl mt-3">{formatNumber(resumo?.totalCarregado ?? 0)}</p>
-            <p className="text-mut text-sm">kg no período</p>
-            <div className="mt-4 h-2 rounded-full bg-panel2 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-car transition-all duration-700"
-                style={{ width: `${percentOf(resumo?.totalCarregado, resumo?.capacidadeTotal)}%` }}
-              />
-            </div>
-            <p className="mt-2 text-xs text-mut">Entrada de massa</p>
-          </GlowCard>
-
           <GlowCard color="pro">
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase tracking-[0.15em] text-pro">Produzido Germen</p>
@@ -277,11 +261,28 @@ function Index() {
             <div className="mt-4 h-2 rounded-full bg-panel2 overflow-hidden">
               <div
                 className="h-full rounded-full bg-pro transition-all duration-700"
-                style={{ width: `${percentOf(resumo?.totalProduzido, resumo?.totalCarregado)}%` }}
+                style={{ width: `${(resumo?.totalProduzido ?? 0) > 0 ? 100 : 0}%` }}
+              />
+            </div>
+            <p className="mt-2 text-xs text-mut">Entrada de massa nos silos</p>
+          </GlowCard>
+
+          <GlowCard color="car">
+            <div className="flex items-center justify-between">
+              <p className="text-xs uppercase tracking-[0.15em] text-car">Carregado</p>
+              <span className="size-2.5 rounded-full bg-car shadow-[0_0_10px_#f0a911]" />
+            </div>
+            <p className="font-mono text-4xl mt-3">{formatNumber(resumo?.totalCarregado ?? 0)}</p>
+            <p className="text-mut text-sm">kg no período</p>
+            <div className="mt-4 h-2 rounded-full bg-panel2 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-car transition-all duration-700"
+                style={{ width: `${percentOf(resumo?.totalCarregado, resumo?.totalProduzido)}%` }}
               />
             </div>
             <p className="mt-2 text-xs text-mut">
-              Rendimento {rendimento(resumo?.totalProduzido, resumo?.totalCarregado)} sobre carga
+              Saída de massa · {rendimento(resumo?.totalCarregado, resumo?.totalProduzido)} do
+              produzido
             </p>
           </GlowCard>
         </section>
@@ -454,7 +455,7 @@ function Index() {
             <div className="mt-5 pt-4 border-t border-line rounded-xl bg-panel2 p-4 -mx-1">
               <p className="text-xs text-mut">Balanço líquido</p>
               <p
-                className={`font-mono text-2xl mt-1 ${(resumo?.balanco ?? 0) >= 0 ? "text-car" : "text-pro"}`}
+                className={`font-mono text-2xl mt-1 ${(resumo?.balanco ?? 0) >= 0 ? "text-pro" : "text-car"}`}
               >
                 {(resumo?.balanco ?? 0) >= 0 ? "+" : ""}
                 {formatNumber(resumo?.balanco ?? 0)} kg
@@ -515,12 +516,12 @@ function LancamentoForm({
       if (tipo === "carregamento") {
         await doCreateCarregamento({ data: payload });
         toast.success("Carregamento registrado", {
-          description: `${quantidade} kg adicionados ao silo.`,
+          description: `${quantidade} kg retirados do silo.`,
         });
       } else if (tipo === "producao") {
         await doCreateProducao({ data: payload });
         toast.success("Produção registrada", {
-          description: `${quantidade} kg de germen produzidos.`,
+          description: `${quantidade} kg de germen entraram no silo.`,
         });
       } else if (tipo === "reprocesso") {
         await doCreateReprocesso({ data: payload });
@@ -558,7 +559,7 @@ function LancamentoForm({
               tipo === "carregamento" ? "bg-car text-white" : "text-mut hover:text-cream"
             }`}
           >
-            <ArrowDownLeft className="size-4" /> Carreg.
+            <ArrowUpRight className="size-4" /> Carreg.
           </button>
           <button
             type="button"
@@ -567,7 +568,7 @@ function LancamentoForm({
               tipo === "producao" ? "bg-pro text-white" : "text-mut hover:text-cream"
             }`}
           >
-            <ArrowUpRight className="size-4" /> Produção
+            <ArrowDownLeft className="size-4" /> Produção
           </button>
           <button
             type="button"
@@ -683,9 +684,9 @@ function percentOf(part?: number, total?: number) {
   return Math.min(100, Math.round((part / total) * 100));
 }
 
-function rendimento(produzido?: number, carregado?: number) {
-  if (!produzido || !carregado || carregado === 0) return "0%";
-  return `${((produzido / carregado) * 100).toFixed(1).replace(".", ",")}%`;
+function rendimento(carregado?: number, produzido?: number) {
+  if (!carregado || !produzido || produzido === 0) return "0%";
+  return `${((carregado / produzido) * 100).toFixed(1).replace(".", ",")}%`;
 }
 
 function labelPeriodo(p: Periodo) {

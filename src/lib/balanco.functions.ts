@@ -139,9 +139,9 @@ export const createCarregamento = createServerFn({ method: "POST" })
     `) as [MovimentoInsertRow];
     const row = rows[0];
 
-    // Carregamento entra no silo
+    // Carregamento (caminhão) sai do silo
     await sql`
-      UPDATE silos SET estoque_atual_kg = estoque_atual_kg + ${data.quantidade_kg}
+      UPDATE silos SET estoque_atual_kg = GREATEST(0, estoque_atual_kg - ${data.quantidade_kg})
       WHERE id = ${data.silo_id}
     `;
 
@@ -162,9 +162,9 @@ export const createProducao = createServerFn({ method: "POST" })
     `) as [MovimentoInsertRow];
     const row = rows[0];
 
-    // Produção de germen consome o silo
+    // Produção de germen entra no silo
     await sql`
-      UPDATE silos SET estoque_atual_kg = GREATEST(0, estoque_atual_kg - ${data.quantidade_kg})
+      UPDATE silos SET estoque_atual_kg = estoque_atual_kg + ${data.quantidade_kg}
       WHERE id = ${data.silo_id}
     `;
 
@@ -244,6 +244,7 @@ export const getResumo = createServerFn({ method: "GET" })
       capacidadeTotal,
       percentualOcupacao:
         capacidadeTotal > 0 ? Math.round((estoqueAtual / capacidadeTotal) * 100) : 0,
-      balanco: totalCarregado - totalProduzido,
+      // Positivo = acumulou nos silos (produziu mais do que carregou)
+      balanco: totalProduzido - totalCarregado,
     };
   });
